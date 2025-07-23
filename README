@@ -1,0 +1,43 @@
+# Tema 1 - Dataplane Router
+
+## Procesul de dirijare
+
+     Codul prezentat de mine realizeaza urmatoarele etape pentru a gestiona
+    dirijarea pachetelor IP:
+    - parseaza pachetul si verifica daca checksum-ul este corect
+    - verifica daca ttl <= 1, caz in care trimite un ICMP Time Exceeded (cod 11)
+    - cautam in trie urmatoare ruta, iar daca nu este gasita o ruta trimitem
+    ICMP Destination Unreachable (cod 0, type 3)
+    - cautam adresa MAC in arp table, iar in cazul in care nu este gasita
+    trimitem o cerere ARP si o adaugam in coada.
+    - transmiterea pachetului catre urmatoarea destinatie
+
+## Longest Common Prefix
+
+     Pentru a gasi cel mai lung prefix comun am inserat toate intrarile din
+    routing table intr-un trie binar, fiecare nod avand 2 fii, unul semnificand
+    ca urmatorul bit este 0, iar celalalt 1. Cand am inserat intreaga adresa a
+    unei intrari, marcam nodul terminal cu structura de entry corespunzatoare
+    acelei intrari. Pentru a cauta o adresa parcurgem trie-ul, iar cand
+    intalnim un nod care are node->info diferit null, el reprezinta cel mai
+    lung prefix comun pana in acel punct si il retinem.
+
+## Protocolul ARP
+
+     Pasi principali:
+    - cand adresa MAC nu se afla in cache-ul ARP, trimit un ARP REQUEST pe
+    interfata corespunzatoare; simultan, pachetul original este plasat
+    intr-o coada pentru a putea fi trimis in viitor
+    - atunci cand un router primeste ARP REPLY, o adaugam in arp cache
+    - dupa actualizarea cache-ului, se retrimit toate pachetele din coada care
+    asteptau o anumita adresa, restul fiind readaugate intr-o coada auxiliara
+    - daca router-ul primeste un ARP REQUEST, raspunde cu un arp reply care
+    contine adresa MAC a interfetei corespunzatoare
+
+## Protocolul ICMP
+
+    Routerul genereaza raspunsuri ICMP pentru urmatoare situatii:
+    - TTL expirat(ttl <= 1) cod 11
+    - Unknown destination(cand nu gasim in trie destinatia dorita) cod 0, type 3
+    - IMCP ECHO: daca routerul primeste un ICMP Echo Request destinat lui,
+    acesta raspune cu un ICMP Echo Reply
